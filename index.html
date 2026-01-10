@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CyberHeist: Signal Escape</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #010808;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+}
+#overlay, #pauseOverlay, #endOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  color: #00ffd0;
+  background: rgba(1,8,8,0.95);
+  z-index: 10;
+  text-align: center;
+  padding: 20px;
+}
+.hidden { display: none; }
+.button {
+  margin-top: 20px;
+  padding: 8px 14px;
+  border: 1px solid #00ffd0;
+  color: #00ffd0;
+}
+.button:hover { background: #00ffd0; color: #000; }
+</style>
+</head>
+
+<body>
+<div id="overlay">LOADING…</div>
+<div id="pauseOverlay" class="hidden">
+  PAUSED
+  <div class="button" id="resumeBtn">RESUME</div>
+</div>
+<div id="endOverlay" class="hidden"></div>
+
+<script>
+/* ================= GLOBAL STATE ================= */
+const WIDTH = 360, HEIGHT = 640;
+
+let mainScene;
+
+/* ================= GAME CONFIG ================= */
+const game = new Phaser.Game({
+  type: Phaser.AUTO,
+  width: WIDTH,
+  height: HEIGHT,
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { y: 0 }, debug: false }
+  },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
+  scene: { preload, create, update }
+});
+
+/* ================= AUDIO (web audio synth) ================= */
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+function playTone(freq, duration=0.1) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+/* ================= PRELOAD ================= */
+function preload() {
+  this.load.on('complete', () => {
+    const ov = document.getElementById('overlay');
+    ov.textContent = "TOUCH TO START";
+    function start() {
+      ov.classList.add('hidden');
+      ov.removeEventListener('touchstart', start);
+      ov.removeEventListener('pointerdown', start);
+      ov.removeEventListener('click', start);
+    }
+    ov.addEventListener('touchstart', start, { once: true });
+    ov.addEventListener('pointerdown', start, { once: true });
+    ov.addEventListener('click', start, { once: true });
+  });
+
+  this.load.image('player','player.PNG');
+  this.load.image('enemy','enemy.PNG');
+  this.load.image('drone','drone.PNG');
+  this.load.image('boss','boss.PNG');
+  this.load.image('bullet','bullet.PNG');
+  this.load.image('data','data.PNG');
+  this.load.image('power','power.PNG');
+}
+
+/* ================= CREATE ================= */
+function create() {
+  mainScene = this;
+
+  this.add.rectangle(0,0,WIDTH,HEIGHT,0x020a0a).setOrigin(0);
+
+  this.stateData = { signal:100, shield:0, score:0, fireRate:180, speed:240, wave:1, bossHP:0 };
+  this.gameOver = false;
+  this.paused = false;
+
+  this.player = this.physics.add.sprite(WIDTH/2,HEIGHT-80,'player').setScale(0.25).setCollideWorldBounds(true);
+
+  this.bullets = this.physics.add.group();
+  this.eBullets = this.physics.add.group();
+  this.enemies = this.physics.add.group();
+  this.drones = this.physics.add.group();
+  this.pickups = this.physics.add.group();
+
+  spawnWave(this);
+
+  this.uiText = this.add.text(10,10,'',{fontSize:'12px',color:'#00ffd0'});
+
+  // TOUCH UI
+  const btnStyle = { fontSize:'22px', backgroundColor:'#111', color:'#00ffd0', padding:{x:14,y:6} };
+  this.add.text(20,HEIGHT-60,'◀',btnStyle).setInteractive()
+      .on('pointerdown',()=>this.m=-1).on('pointerup',()=>this.m=0).on('pointerout',()=>this.m=0);
+  this.add.text(90,HEIGHT-60,'▶',btnStyle).setInteractive()
+      .on('pointerdown',()=>this.m=1).on('pointerup',()=>this.m=0).on('pointerout',()=>this.m=0);
+  this.add.text(WIDTH-70,HEIGHT-60,'⦿',btnStyle).setInteractive()
+      .on('pointerdown',()=>shoot(this));
+
+  this.physics.add.overlap(this.bullets,this.enemies,killEnemy,null,this);
+  this.physics.add.overlap(this.bullets,this.drones,killEnemy,null,this);
+  this.physics.add.overlap(this.bullets,boss,hitBoss,null,this);
+  this.physics.add.overlap(this.eBullets,this.player,hitPlayer,null,this);
+  this.physics.add.overlap(this.player,this.pickups,collectPickup,null,this);
+
+  // Pause/resume
+  document.getElementById('resumeBtn').onclick = () => {
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    this.paused = false;
+  };
+}
+
+/* ================= UPDATE ================= */
+function update() {
+  if (mainScene.paused || mainScene.gameOver) return;
+  const st = mainScene.stateData;
+
+  mainScene.player.setVelocityX(mainScene.m*st.speed);
+
+  mainScene.enemies.children.each(e=>{
+    if(!e) return;
+    e.y += 1+st.wave*0.2;
+    if(Phaser.Math.Between(0,150)===0) enemyShoot(mainScene,e);
+    if(e.y > HEIGHT+40) e.destroy();
+  });
+
+  mainScene.drones.children.each(d=>{
+    if(!d) return;
+    d.y += 1.6;
+    d.x += Math.sin(mainScene.time.now*0.004)*2;
+  });
+
+  st.signalText = st.signal;
+  mainScene.uiText.setText(
+    `SIGNAL ${st.signal}\nSHIELD ${st.shield}\nWAVE ${st.wave}\nSCORE ${st.score}`
+  );
+}
+
+/* ================= GAME LOGIC ================= */
+function shoot(scene) {
+  const st = scene.stateData;
+  if(!canShoot||scene.gameOver||scene.paused) return;
+  const b = scene.physics.add.sprite(scene.player.x,scene.player.y-20,'bullet')
+    .setScale(0.15).setVelocityY(-450).setAngle(-90);
+  scene.bullets.add(b);
+  canShoot=false;
+  scene.time.delayedCall(st.fireRate,()=>canShoot=true);
+  playTone(900,0.08);
+}
+
+function enemyShoot(scene,e) {
+  const b = scene.physics.add.sprite(e.x,e.y+20,'bullet')
+    .setScale(0.12).setVelocityY(200+scene.stateData.wave*20).setAngle(90);
+  scene.eBullets.add(b);
+}
+
+function spawnWave(scene) {
+  const st = scene.stateData;
+  if(st.wave===5 && !bossActive) { spawnBoss(scene); return; }
+  for(let i=0;i<3+st.wave;i++){
+    scene.enemies.add(scene.physics.add.sprite(60+i*60,-60,'enemy').setScale(0.22));
+  }
+}
+
+function spawnBoss(scene) {
+  bossActive=true;
+  boss=scene.physics.add.sprite(W/2,-200,'boss').setScale(0.4);
+  scene.stateData.bossHP=200;
+}
+
+function killEnemy(b,enemy) {
+  b.destroy(); enemy.destroy();
+  mainScene.stateData.score+=10;
+  dropPickup(mainScene,enemy.x,enemy.y);
+  if(mainScene.enemies.countActive()===0) mainScene.stateData.wave++,spawnWave(mainScene);
+}
+
+function hitBoss(b,bossSprite) {
+  b.destroy();
+  mainScene.stateData.bossHP-=5;
+  mainScene.cameras.main.shake(60,0.01);
+  if(mainScene.stateData.bossHP<=0){ bossSprite.destroy(); winGame(mainScene); }
+}
+
+function dropPickup(scene,x,y) {
+  if(Phaser.Math.Between(0,3)===0)
+    scene.pickups.add(scene.physics.add.sprite(x,y,'data').setScale(0.15));
+  if(Phaser.Math.Between(0,5)===0)
+    scene.pickups.add(scene.physics.add.sprite(x,y,'power').setScale(0.15));
+}
+
+function collectPickup(pPlayer,p) {
+  p.destroy();
+  if(p.texture.key==='data'){ mainScene.stateData.score+=50; mainScene.stateData.fireRate=Math.max(120,mainScene.stateData.fireRate-10); }
+  if(p.texture.key==='power'){ mainScene.stateData.shield=50; mainScene.stateData.speed+=10; }
+}
+
+function hitPlayer() {
+  const st = mainScene.stateData;
+  if(st.shield>0){ st.shield-=10; return; }
+  st.signal-=15;
+  mainScene.cameras.main.flash(100,255,0,0);
+  mainScene.cameras.main.shake(100,0.02);
+  if(st.signal<=0) endGame(mainScene,"You were destroyed");
+}
+
+/* ================= END STATES ================= */
+
+function endGame(scene,reason) {
+  scene.gameOver=true;
+  const e = document.getElementById('endOverlay');
+  e.innerHTML = `${reason}<br><div class="button" onclick="location.reload()">RESTART</div>`;
+  e.classList.remove('hidden');
+}
+
+function winGame(scene) {
+  scene.gameOver=true;
+  const e = document.getElementById('endOverlay');
+  e.innerHTML = `CYBERHEIST COMPLETE!<br><div class="button" onclick="location.reload()">RESTART</div>`;
+  e.classList.remove('hidden');
+}
+</script>
+
+</body>
+</html>
