@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CyberHeist: Signal Escape</title>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+
+<style>
+html,body{margin:0;padding:0;background:#050808;overflow:hidden}
+canvas{display:block;margin:0 auto;touch-action:none}
+#overlay{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:monospace;
+  color:#00ffd0;
+  background:#050808;
+  z-index:10;
+  text-align:center;
+  padding:20px;
+}
+</style>
+</head>
+
+<body>
+<div id="overlay">BOOTING CYBER GRID…</div>
+
+<script>
+/* ================= CORE ================= */
+
+const W=360,H=640;
+const overlay=document.getElementById("overlay");
+
+let player, bullets, eBullets, enemies, drones, pickups;
+let move=0, canShoot=true;
+let signal=100, shield=0, score=0;
+let wave=1, bossActive=false, gameOver=false;
+let fireRate=220, speed=240;
+
+/* ================= GAME ================= */
+
+new Phaser.Game({
+  type:Phaser.AUTO,
+  width:W,height:H,
+  physics:{default:'arcade',arcade:{gravity:{y:0}}},
+  scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
+  scene:{preload,create,update}
+});
+
+/* ================= PRELOAD ================= */
+
+function preload(){
+  this.load.on('progress',p=>{
+    overlay.textContent=`LOADING ${Math.floor(p*100)}%`;
+  });
+  this.load.on('complete',()=>{
+    overlay.textContent="TOUCH TO START";
+    overlay.onclick=()=>overlay.style.display="none";
+  });
+
+  this.load.image('player','player.PNG');
+  this.load.image('enemy','enemy.PNG');
+  this.load.image('drone','drone.PNG');
+  this.load.image('boss','boss.PNG');
+  this.load.image('bullet','bullet.PNG');
+  this.load.image('data','data.PNG');
+  this.load.image('power','power.PNG');
+}
+
+/* ================= CREATE ================= */
+
+function create(){
+  this.add.rectangle(0,0,W,H,0x020a0a).setOrigin(0);
+
+  player=this.physics.add.sprite(W/2,H-90,'player')
+    .setScale(0.25)
+    .setCollideWorldBounds(true);
+
+  bullets=this.physics.add.group();
+  eBullets=this.physics.add.group();
+  enemies=this.physics.add.group();
+  drones=this.physics.add.group();
+  pickups=this.physics.add.group();
+
+  spawnWave(this);
+
+  this.ui=this.add.text(10,10,'',{fontSize:'12px',color:'#00ffd0'});
+
+  // Touch
+  const btn={fontSize:'22px',backgroundColor:'#111',color:'#00ffd0',padding:{x:14,y:6}};
+  this.add.text(20,H-60,'◀',btn).setInteractive()
+    .on('pointerdown',()=>move=-1).on('pointerup',()=>move=0);
+  this.add.text(90,H-60,'▶',btn).setInteractive()
+    .on('pointerdown',()=>move=1).on('pointerup',()=>move=0);
+  this.add.text(W-70,H-60,'⦿',btn).setInteractive()
+    .on('pointerdown',()=>shoot(this));
+
+  // Collisions
+  this.physics.add.overlap(bullets,enemies,killEnemy,null,this);
+  this.physics.add.overlap(bullets,drones,killEnemy,null,this);
+  this.physics.add.overlap(bullets,[boss],hitBoss,null,this);
+  this.physics.add.overlap(eBullets,player,hitPlayer,null,this);
+  this.physics.add.overlap(player,pickups,collect,null,this);
+}
+
+/* ================= UPDATE ================= */
+
+function update(){
+  if(gameOver) return;
+
+  player.setVelocityX(move*speed);
+
+  enemies.children.each(e=>{
+    if(!e) return;
+    e.y+=0.8+wave*0.2;
+    if(Phaser.Math.Between(0,120)==0) enemyShoot(this,e);
+    if(e.y>H+40) e.destroy();
+  });
+
+  drones.children.each(d=>{
+    if(!d) return;
+    d.y+=1.6;
+    d.x+=Math.sin(this.time.now*0.004)*2;
+  });
+
+  signal-=0.01;
+  shield=Math.max(0,shield-0.02);
+
+  this.ui.setText(
+    `SIGNAL ${Math.floor(signal)}\n`+
+    `SHIELD ${Math.floor(shield)}\n`+
+    `WAVE ${wave}\n`+
+    `SCORE ${score}`
+  );
+
+  if(signal<=0) endGame(this);
+}
+
+/* ================= GAMEPLAY ================= */
+
+function shoot(scene){
+  if(!canShoot||gameOver) return;
+  const b=scene.physics.add.sprite(player.x,player.y-20,'bullet')
+    .setScale(0.15).setVelocityY(-450);
+  bullets.add(b);
+  canShoot=false;
+  scene.time.delayedCall(fireRate,()=>canShoot=true);
+}
+
+function enemyShoot(scene,e){
+  const b=scene.physics.add.sprite(e.x,e.y+20,'bullet')
+    .setScale(0.12).setVelocityY(200+wave*20);
+  eBullets.add(b);
+}
+
+function spawnWave(scene){
+  if(wave===5&&!bossActive){
+    bossActive=true;
+    spawnBoss(scene);
+    return;
+  }
+  for(let i=0;i<3+wave;i++)
+    enemies.add(scene.physics.add.sprite(60+i*60,-60,'enemy').setScale(0.22));
+  if(wave%2==0)
+    drones.add(scene.physics.add.sprite(W/2,-120,'drone').setScale(0.2));
+}
+
+function spawnBoss(scene){
+  boss=scene.physics.add.sprite(W/2,-200,'boss')
+    .setScale(0.4);
+  boss.hp=200;
+}
+
+function killEnemy(b,e){
+  b.destroy(); e.destroy();
+  score+=10;
+  dropPickup(this,e.x,e.y);
+  if(enemies.countActive()+drones.countActive()==0){
+    wave++;
+    spawnWave(this);
+  }
+}
+
+function hitBoss(b){
+  b.destroy();
+  boss.hp-=5;
+  this.cameras.main.shake(60,0.01);
+  if(boss.hp<=0){
+    boss.destroy();
+    winGame(this);
+  }
+}
+
+function dropPickup(scene,x,y){
+  if(Phaser.Math.Between(0,3)==0)
+    pickups.add(scene.physics.add.sprite(x,y,'data').setScale(0.15));
+  if(Phaser.Math.Between(0,6)==0)
+    pickups.add(scene.physics.add.sprite(x,y,'power').setScale(0.15));
+}
+
+function collect(player,p){
+  p.destroy();
+  if(p.texture.key==='data'){ score+=50; fireRate=Math.max(120,fireRate-10); }
+  if(p.texture.key==='power'){ shield=50; speed+=10; }
+}
+
+function hitPlayer(p,b){
+  b.destroy();
+  if(shield>0){ shield-=10; return; }
+  signal-=15;
+  this.cameras.main.shake(100,0.02);
+}
+
+/* ================= END STATES ================= */
+
+function endGame(scene){
+  gameOver=true;
+  scene.add.rectangle(0,0,W,H,0x000000,0.9).setOrigin(0);
+  scene.add.text(W/2,H/2,
+    "SIGNAL LOST\nTHE GRID OWNS YOU",
+    {fontSize:'20px',color:'#ff3355',align:'center'}
+  ).setOrigin(0.5);
+}
+
+function winGame(scene){
+  gameOver=true;
+  scene.add.rectangle(0,0,W,H,0x000000,0.9).setOrigin(0);
+  scene.add.text(W/2,H/2,
+    "CYBERHEIST COMPLETE\nYOU ESCAPED THE GRID",
+    {fontSize:'18px',color:'#00ffd0',align:'center'}
+  ).setOrigin(0.5);
+}
+</script>
+</body>
+</html>
