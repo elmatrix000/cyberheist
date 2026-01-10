@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CyberHeist</title>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #030808;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+}
+</style>
+</head>
+
+<body>
+
+<script>
+/* ================= CONFIG ================= */
+
+const WIDTH = 360;
+const HEIGHT = 640;
+
+const config = {
+  type: Phaser.AUTO,
+  width: WIDTH,
+  height: HEIGHT,
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { y: 0 }, debug: false }
+  },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
+  scene: { preload, create, update }
+};
+
+new Phaser.Game(config);
+
+/* ================= STATE ================= */
+
+let player;
+let bullets;
+let enemies;
+let drones;
+
+let moveDir = 0;
+let canShoot = true;
+let signal = 100;
+let score = 0;
+let gameOver = false;
+
+/* ================= PRELOAD ================= */
+
+function preload() {
+  this.load.on('loaderror', file => {
+    console.error('❌ LOAD FAILED:', file.src);
+  });
+
+  this.load.image('player', 'player.PNG');
+  this.load.image('enemy',  'enemy.PNG');
+  this.load.image('drone',  'drone.PNG');
+  this.load.image('boss',   'boss.PNG');
+  this.load.image('bullet', 'bullet.PNG');
+  this.load.image('data',   'data.PNG');
+  this.load.image('power',  'power.PNG');
+}
+
+/* ================= CREATE ================= */
+
+function create() {
+  this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x020a0a).setOrigin(0);
+
+  player = this.physics.add.sprite(WIDTH / 2, HEIGHT - 80, 'player');
+  player.setScale(0.6);
+  player.setCollideWorldBounds(true);
+
+  bullets = this.physics.add.group();
+  enemies = this.physics.add.group();
+  drones = this.physics.add.group();
+
+  spawnEnemies(this);
+  spawnDrones(this);
+
+  /* UI */
+  this.signalText = this.add.text(10, 10, 'SIGNAL 100', { fontSize: '14px', color: '#00ffd0' });
+  this.scoreText  = this.add.text(10, 28, 'SCORE 0',   { fontSize: '12px', color: '#00ffd0' });
+
+  /* TOUCH CONTROLS */
+  const btn = {
+    fontSize: '22px',
+    backgroundColor: '#111',
+    color: '#00ffd0',
+    padding: { x: 16, y: 6 }
+  };
+
+  const left  = this.add.text(20, HEIGHT - 60, '◀', btn).setInteractive();
+  const right = this.add.text(90, HEIGHT - 60, '▶', btn).setInteractive();
+  const fire  = this.add.text(WIDTH - 70, HEIGHT - 60, '⦿', btn).setInteractive();
+
+  left.on('pointerdown',  () => moveDir = -1);
+  right.on('pointerdown', () => moveDir = 1);
+  left.on('pointerup',    () => moveDir = 0);
+  right.on('pointerup',   () => moveDir = 0);
+  fire.on('pointerdown',  () => shoot(this));
+
+  /* COLLISIONS */
+  this.physics.add.overlap(bullets, enemies, hitEnemy, null, this);
+  this.physics.add.overlap(bullets, drones,  hitDrone, null, this);
+}
+
+/* ================= UPDATE ================= */
+
+function update() {
+  if (gameOver) return;
+
+  player.setVelocityX(moveDir * 220);
+
+  enemies.children.each(e => {
+    if (!e) return;
+    e.y += 1.2;
+    if (e.y > HEIGHT + 40) e.destroy();
+  });
+
+  drones.children.each(d => {
+    if (!d) return;
+    d.y += 2;
+    d.x += Math.sin(this.time.now * 0.004) * 2;
+    if (d.y > HEIGHT + 40) d.destroy();
+  });
+
+  bullets.children.each(b => {
+    if (b.y < -20) b.destroy();
+  });
+
+  signal -= 0.01;
+  this.signalText.setText('SIGNAL ' + Math.floor(signal));
+  this.scoreText.setText('SCORE ' + score);
+
+  if (signal <= 0) endGame(this);
+}
+
+/* ================= GAMEPLAY ================= */
+
+function shoot(scene) {
+  if (!canShoot || gameOver) return;
+
+  const b = scene.physics.add.sprite(player.x, player.y - 20, 'bullet');
+  b.setScale(0.6);
+  b.setVelocityY(-450);
+  bullets.add(b);
+
+  canShoot = false;
+  scene.time.delayedCall(220, () => canShoot = true);
+}
+
+function spawnEnemies(scene) {
+  for (let i = 0; i < 4; i++) {
+    const e = scene.physics.add.sprite(60 + i * 70, -60, 'enemy');
+    e.setScale(0.6);
+    enemies.add(e);
+  }
+}
+
+function spawnDrones(scene) {
+  for (let i = 0; i < 2; i++) {
+    const d = scene.physics.add.sprite(120 + i * 100, -180, 'drone');
+    d.setScale(0.6);
+    drones.add(d);
+  }
+}
+
+function hitEnemy(bullet, enemy) {
+  bullet.destroy();
+  enemy.destroy();
+  score += 10;
+  signal += 5;
+}
+
+function hitDrone(bullet, drone) {
+  bullet.destroy();
+  drone.destroy();
+  score += 20;
+  signal += 10;
+}
+
+/* ================= END ================= */
+
+function endGame(scene) {
+  gameOver = true;
+  scene.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, 0.85).setOrigin(0);
+  scene.add.text(
+    WIDTH / 2,
+    HEIGHT / 2,
+    'SIGNAL LOST\nCYBERHEIST FAILED',
+    { fontSize: '20px', color: '#ff3355', align: 'center' }
+  ).setOrigin(0.5);
+}
+</script>
+
+</body>
+</html>
