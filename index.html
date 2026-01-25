@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nimble Creations | Outdoor Adventure Park</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <h1>Nimble Creations (Pty) Ltd</h1>
+  <p class="tagline">Creating Awesomeness in Mogale City</p>
+  <a href="#booking" class="btn">Book Your Experience</a>
+</header>
+
+<section id="about">
+<h2>About The Venue</h2>
+<p>
+Nimble Creations is a fully outdoor adventure park designed for controlled excitement,
+team interaction and leisure. The land offers a professionally managed flow where clients
+enter through a central check-in point, receive a ticket or voucher, and participate in
+assigned activities within their booked time slots.
+</p>
+</section>
+
+<section id="layout">
+<h2>Venue Layout</h2>
+<ul>
+<li>🎟️ Central Reception & Check-In Table</li>
+<li>🏍️ F1-Style Rally Track for Mountain Bike Rides</li>
+<li>🚘 Go-Kart Race Track located inside the rally circuit</li>
+<li>🔫 Paintball Combat Cage using wooden boards & natural tree cover</li>
+<li>🎯 Shooting & Training Range next to reception</li>
+<li>🏌️ Driving Range on the outer side of the rally track</li>
+<li>☕ Chill-Out & Catering Area</li>
+</ul>
+</section>
+
+<section id="activities">
+<h2>Our Experiences</h2>
+
+<div class="card">
+<h3>🏍️ Mountain Bike Rally Rides</h3>
+<p>Ride on a simple F1-inspired rally track built for endurance, speed and fun.</p>
+</div>
+
+<div class="card">
+<h3>🚘 Go-Kart Racing</h3>
+<p>Designed inside the rally track for controlled racing, competition and timed heats.</p>
+</div>
+
+<div class="card">
+<h3>🔫 Paintball Game Sessions</h3>
+<p>Combat cage designed with wooden barriers and large trees for tactical cover.</p>
+</div>
+
+<div class="card">
+<h3>🎯 Paintball Shooting & Safety Range</h3>
+<p>Used for safety briefings, target shooting and training first-time players.</p>
+</div>
+
+<div class="card">
+<h3>🏌️ Driving Range</h3>
+<p>Players receive golf clubs and a bucket of balls and are guided to play zones.</p>
+</div>
+
+<div class="card">
+<h3>🙏🏽 Team Building</h3>
+<p>Structured outdoor activities that build leadership, trust and communication.</p>
+</div>
+
+<div class="card">
+<h3>☕ Chill-Out Section</h3>
+<p>Relax, eat, socialise and watch activities across the park.</p>
+</div>
+
+</section>
+
+<section id="map">
+<h2>Find Us</h2>
+<iframe
+src="https://www.google.com/maps?q=-26.071436,27.732091&z=15&output=embed"
+loading="lazy">
+</iframe>
+</section>
+
+<section id="booking">
+<h2>Book Your Activity</h2>
+
+<form id="bookingForm">
+
+<label>Full Name</label>
+<input type="text" id="name" required>
+
+<label>Activity</label>
+<select id="activity">
+<option>Mountain Bike Rally Ride</option>
+<option>Go-Kart Race</option>
+<option>Paintball – Target Shooting (25 balls)</option>
+<option>Paintball – Combat Session</option>
+<option>Driving Range</option>
+<option>Team Building</option>
+</select>
+
+<label>Time Slot</label>
+<select id="time">
+<option>09:00 – 10:00</option>
+<option>10:30 – 11:30</option>
+<option>12:00 – 13:00</option>
+<option>14:00 – 15:00</option>
+<option>15:30 – 16:30</option>
+</select>
+
+<button type="submit" class="btn">Generate Voucher</button>
+
+</form>
+
+<div id="ticket" class="ticket hidden"></div>
+</section>
+
+<footer>
+<p>
+📍 Mogale City Outdoor Adventure Park <br>
+📘 Facebook: Nimble Creations <br>
+© 2026 Nimble Creations (Pty) Ltd
+</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
