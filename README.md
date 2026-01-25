@@ -1,2 +1,0 @@
-# cyberheist
-game
