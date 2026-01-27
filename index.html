@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nimble Creations | Outdoor Adventure Park</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+
+<header class="hero">
+  <div class="overlay">
+    <img src="logo.PNG" class="logo" alt="Nimble Creations Logo">
+    <h1>Nimble Creations (PTY) LTD</h1>
+    <p>Creating Awesomeness in Mogale City</p>
+    <a href="#booking" class="btn">Book Experience</a>
+  </div>
+</header>
+
+<section class="glass">
+<h2>🌿 About Us</h2>
+<p>
+Nimble Creations is a total outdoor adventure destination offering adrenaline,
+team building, and leisure activities. Guests check in at reception, receive
+a digital voucher, and participate in scheduled activities based on their booking.
+</p>
+</section>
+
+<section class="glass">
+<h2>🎯 Activities</h2>
+<div class="grid">
+<div class="card">🏍️ <strong>Mountain Bike Rides</strong><br>F1-style rally track</div>
+<div class="card">🚘 <strong>Go-Kart Racing</strong><br>Track inside rally loop</div>
+<div class="card">🔫 <strong>Paintball Sessions</strong><br>Combat cage & safety range</div>
+<div class="card">🙏🏽 <strong>Team Building</strong><br>Corporate & group activities</div>
+<div class="card">🏌️ <strong>Driving Range</strong><br>Golf clubs & ball buckets</div>
+<div class="card">☕ <strong>Chill-Out Zone</strong><br>Relax & catering space</div>
+</div>
+</section>
+
+<section class="glass">
+<h2>🗺️ Location</h2>
+<p>Mogale City, South Africa</p>
+
+<iframe
+  src="https://maps.google.com/maps?q=-26.1477877,27.7668222&z=15&output=embed"
+  width="100%" height="300" style="border-radius:15px;border:0;">
+</iframe>
+
+<p>
+<a class="link" target="_blank"
+href="https://www.facebook.com/share/p/1DAM8fDCq6/">
+Visit our Facebook Page →
+</a>
+</p>
+</section>
+
+<section id="booking" class="glass">
+<h2>🎟️ Book & Generate Voucher</h2>
+
+<form id="bookingForm">
+<input id="name" placeholder="Full Name" required>
+<select id="activity">
+  <option>Mountain Bike Ride</option>
+  <option>Go-Kart Race</option>
+  <option>Paintball Session</option>
+  <option>Team Building</option>
+  <option>Driving Range</option>
+</select>
+<select id="time">
+  <option>09:00</option>
+  <option>11:00</option>
+  <option>13:00</option>
+  <option>15:00</option>
+</select>
+<button type="submit" class="btn">Confirm Booking</button>
+</form>
+
+<div id="ticket" class="ticket hidden"></div>
+</section>
+
+<footer>
+<p>© 2026 Nimble Creations (PTY) LTD</p>
+<p class="small">
+This website is a preview version. Content and features are subject to change.
+</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
