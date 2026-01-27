@@ -1,0 +1,98 @@
+body {
+margin:0;
+font-family:system-ui, sans-serif;
+background:#0b0b0b;
+color:#fff;
+}
+
+.hero {
+height:90vh;
+background:linear-gradient(135deg,#00e676,#00695c);
+display:flex;
+align-items:center;
+justify-content:center;
+text-align:center;
+}
+
+.overlay {
+background:rgba(0,0,0,.55);
+padding:40px;
+border-radius:25px;
+backdrop-filter:blur(10px);
+}
+
+.logo {
+width:120px;
+margin-bottom:15px;
+}
+
+.btn {
+display:inline-block;
+padding:12px 26px;
+background:#00e676;
+color:#000;
+border-radius:30px;
+font-weight:600;
+text-decoration:none;
+margin-top:20px;
+}
+
+.glass {
+margin:40px auto;
+max-width:900px;
+padding:30px;
+background:rgba(255,255,255,.08);
+border-radius:20px;
+backdrop-filter:blur(12px);
+}
+
+.grid {
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:20px;
+}
+
+.card {
+background:rgba(0,0,0,.4);
+padding:20px;
+border-radius:15px;
+}
+
+form {
+display:grid;
+gap:15px;
+}
+
+input, select {
+padding:12px;
+border-radius:10px;
+border:none;
+}
+
+.ticket {
+margin-top:20px;
+padding:20px;
+background:#000;
+border-radius:15px;
+}
+
+.hidden {
+display:none;
+}
+
+.link {
+color:#00e676;
+font-weight:600;
+text-decoration:none;
+}
+
+footer {
+text-align:center;
+padding:30px;
+opacity:.8;
+}
+
+.small {
+font-size:12px;
+opacity:.6;
+}
